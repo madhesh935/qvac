@@ -9,6 +9,11 @@ import logging
 import threading
 import time
 import uuid
+import os
+
+# Fix for PostgreSQL setting invalid CA bundle paths globally on Windows
+for env_var in ['REQUESTS_CA_BUNDLE', 'CURL_CA_BUNDLE', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'HTTPS_CA_BUNDLE']:
+    os.environ.pop(env_var, None)
 
 import requests
 from flask import Flask, jsonify, request

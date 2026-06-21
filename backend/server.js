@@ -42,8 +42,9 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3001;
 
-reportStore.init().then(() => {
-  server.listen(PORT, () =>
-    console.log(`[Server] ResQMesh backend running on http://localhost:${PORT}`)
-  );
+reportStore.init().then((storageMode) => {
+  server.listen(PORT, () => {
+    console.log(`[Server] ResQMesh backend running on http://localhost:${PORT}`);
+    console.log(`[Server] Storage mode: ${storageMode.toUpperCase()}`);
+  });
 });

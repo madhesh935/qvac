@@ -19,7 +19,7 @@ function Start-ResQMeshService {
     )
     Write-Host "  Starting $Name..." -ForegroundColor Yellow
     $escapedDir = $WorkDir -replace "'", "''"
-    $fullCommand = "Set-Location -LiteralPath '$escapedDir'; $Command"
+    $fullCommand = "Set-Location -LiteralPath '$escapedDir'; `$env:SSL_CERT_FILE=`$null; `$env:REQUESTS_CA_BUNDLE=`$null; `$env:CURL_CA_BUNDLE=`$null; `$env:SSL_CERT_DIR=`$null; `$env:HTTPS_CA_BUNDLE=`$null; $Command"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", $fullCommand -WindowStyle Normal
     Start-Sleep -Milliseconds 600
 }
@@ -42,12 +42,17 @@ function Install-PythonDeps {
 }
 
 # Copy .env files if missing
-foreach ($dir in @("backend", "frontend")) {
-    $envFile = Join-Path $root "$dir\.env"
-    $example = Join-Path $root "$dir\.env.example"
+$backendDir = Join-Path $root "backend"
+$frontendDir = Join-Path (Split-Path $root -Parent) "frontend"
+
+foreach ($pair in @(@("backend", $backendDir), @("frontend", $frontendDir))) {
+    $name = $pair[0]
+    $dir = $pair[1]
+    $envFile = Join-Path $dir ".env"
+    $example = Join-Path $dir ".env.example"
     if (-not (Test-Path $envFile) -and (Test-Path $example)) {
         Copy-Item $example $envFile
-        Write-Host "  Created $dir\.env from example" -ForegroundColor Cyan
+        Write-Host "  Created $name\.env from example" -ForegroundColor Cyan
     }
 }
 
@@ -67,6 +72,7 @@ Write-Host ""
 Write-Host "  Installing Python dependencies..." -ForegroundColor Gray
 Install-PythonDeps (Join-Path $root "ai-service") "AI Service"
 Install-PythonDeps (Join-Path $root "relay-node") "Relay Node"
+Install-PythonDeps (Join-Path $root "speech-service") "Speech Service"
 
 Write-Host ""
 Write-Host "  Starting services in separate windows..." -ForegroundColor Green
@@ -74,23 +80,25 @@ Write-Host ""
 
 Start-ResQMeshService "AI Service"   "python app.py"    (Join-Path $root "ai-service")
 Start-ResQMeshService "Relay Node" "python app.py"    (Join-Path $root "relay-node")
+Start-ResQMeshService "Speech Service" "python app.py"  (Join-Path $root "speech-service")
 Start-ResQMeshService "Backend"    "npm run dev"      (Join-Path $root "backend")
 
 Write-Host ""
 Write-Host "  Waiting 5 seconds for backend to start..." -ForegroundColor Gray
 Start-Sleep -Seconds 5
 
-Start-ResQMeshService "Frontend" "npm run dev" (Join-Path $root "frontend")
+Start-ResQMeshService "Frontend" "npm run dev" $frontendDir
 
 Write-Host ""
 Write-Host "  +-------------------------------------------+" -ForegroundColor Green
 Write-Host "  |  All services started!                    |" -ForegroundColor Green
 Write-Host "  |                                           |" -ForegroundColor Green
-Write-Host "  |  Victim App  ->  http://localhost:3000          |" -ForegroundColor White
-Write-Host "  |  Dashboard   ->  http://localhost:3000/dashboard |" -ForegroundColor White
-Write-Host "  |  Backend API ->  http://localhost:3001    |" -ForegroundColor White
-Write-Host "  |  Relay Node  ->  http://localhost:5000    |" -ForegroundColor White
-Write-Host "  |  AI Service  ->  http://localhost:5001    |" -ForegroundColor White
+Write-Host "  |  Victim App     ->  http://localhost:3000          |" -ForegroundColor White
+Write-Host "  |  Dashboard      ->  http://localhost:3000/dashboard |" -ForegroundColor White
+Write-Host "  |  Backend API    ->  http://localhost:3001    |" -ForegroundColor White
+Write-Host "  |  Relay Node     ->  http://localhost:5000    |" -ForegroundColor White
+Write-Host "  |  AI Service     ->  http://localhost:5001    |" -ForegroundColor White
+Write-Host "  |  Speech Service ->  http://localhost:5002    |" -ForegroundColor White
 Write-Host "  +-------------------------------------------+" -ForegroundColor Green
 Write-Host ""
 Write-Host "  NOTE: MongoDB is optional - backend uses in-memory storage if mongod is not running." -ForegroundColor Yellow
